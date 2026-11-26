@@ -857,3 +857,108 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Quiet controls and a centered, microphone-driven listening trace. */
+.voice-reveal-root .stage {
+  border: 0;
+  border-radius: 4px;
+  background: radial-gradient(ellipse 70% 65% at 50% 55%, rgba(26, 24, 22, 0.2), transparent 72%), linear-gradient(180deg, #100f0e, #090908 78%, #080807);
+  box-shadow: inset 0 0 110px rgba(0,0,0,.7), 0 24px 72px rgba(0,0,0,.18);
+}
+
+.voice-reveal-root .stage::before,
+.voice-reveal-root .stage::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -20%;
+  pointer-events: none;
+  background: radial-gradient(ellipse 34% 24% at 30% 43%, rgba(150, 146, 139, .075), transparent 75%), radial-gradient(ellipse 28% 18% at 70% 58%, rgba(93, 91, 87, .07), transparent 78%);
+  filter: blur(35px);
+  opacity: .7;
+}
+.voice-reveal-root .stage::after { transform: translate(10%, -4%) scale(1.2); opacity: .42; }
+.voice-reveal-root #gallery-canvas { z-index: 1; }
+.voice-reveal-root .stage-scrim { z-index: 2; }
+
+.voice-reveal-root .theme-toggle {
+  position: absolute;
+  z-index: 10;
+  top: .8rem;
+  right: .85rem;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(232,222,203,.2);
+  border-radius: 50%;
+  color: var(--vr-text-soft);
+  background: rgba(18,17,15,.5);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+}
+.voice-reveal-root .theme-toggle:hover { color: var(--vr-text); border-color: var(--vr-gold); }
+.voice-reveal-root .theme-icon { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.voice-reveal-root .theme-icon-moon { display: none; }
+
+.voice-reveal-root .waveform {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 43%;
+  width: min(25rem, 55%);
+  height: 36px;
+  transform: translateX(-50%);
+  opacity: .08;
+}
+.voice-reveal-root .waveform.is-active { opacity: .9; }
+.voice-reveal-root .controls { gap: .3rem; }
+.voice-reveal-root .record-button {
+  width: 54px;
+  height: 54px;
+  min-height: 54px;
+  padding: 6px;
+  justify-content: center;
+  border-color: rgba(232,222,203,.24);
+  background: rgba(24,22,19,.72);
+  box-shadow: 0 8px 28px rgba(0,0,0,.28);
+}
+.voice-reveal-root .record-icon { width: 40px; height: 40px; }
+.voice-reveal-root .record-hint { min-height: 1.2em; margin: 0; color: var(--vr-muted); font-size: .7rem; }
+.voice-reveal-root .control-row { min-height: 56px; gap: .9rem; }
+
+.voice-reveal-root[data-theme="light"] {
+  --vr-ink: #f4f2ed;
+  --vr-ink-raised: #e8e5de;
+  --vr-surface: #e4e0d8;
+  --vr-surface-soft: rgba(249,247,242,.76);
+  --vr-line: rgba(50,46,39,.14);
+  --vr-line-strong: rgba(50,46,39,.25);
+  --vr-text: #282621;
+  --vr-text-soft: #555148;
+  --vr-muted: #716c62;
+  --vr-faint: #898378;
+  --vr-gold: #927443;
+  --vr-gold-bright: #745a2e;
+  --vr-gold-soft: rgba(146,116,67,.14);
+}
+.voice-reveal-root[data-theme="light"] .stage {
+  background: radial-gradient(ellipse 62% 60% at 50% 48%, rgba(255,255,255,.9), transparent 80%), linear-gradient(180deg, #d8d6d1, #bbb9b4 82%, #aeadab);
+  box-shadow: inset 0 0 90px rgba(44,42,38,.12), 0 24px 72px rgba(30,28,24,.12);
+}
+.voice-reveal-root[data-theme="light"] .stage::before,
+.voice-reveal-root[data-theme="light"] .stage::after { opacity: .18; }
+.voice-reveal-root[data-theme="light"] .stage-scrim {
+  background: linear-gradient(180deg, rgba(247,245,239,.18), transparent 22%, transparent 68%, rgba(44,42,38,.2)), radial-gradient(ellipse 80% 74% at 50% 48%, transparent 50%, rgba(44,42,38,.16));
+}
+.voice-reveal-root[data-theme="light"] .theme-toggle { color: #554f44; background: rgba(250,248,243,.72); border-color: rgba(50,46,39,.18); }
+.voice-reveal-root[data-theme="light"] .theme-icon-sun { display: none; }
+.voice-reveal-root[data-theme="light"] .theme-icon-moon { display: block; }
+.voice-reveal-root[data-theme="light"] .record-button { background: rgba(248,246,240,.82); color: #292721; }
+.voice-reveal-root[data-theme="light"] .record-icon { border-color: rgba(110,87,48,.35); }
+.voice-reveal-root[data-theme="light"] .record-icon svg { stroke: #806337; }
+.voice-reveal-root[data-theme="light"] .result-label { color: #25231f; text-shadow: 0 2px 18px rgba(255,255,255,.42); }
+.voice-reveal-root[data-theme="light"] .result { text-shadow: 0 2px 18px rgba(255,255,255,.55); }
+.voice-reveal-root[data-theme="light"] .result-caveat { color: #666157; }
+.voice-reveal-root[data-theme="light"] .loading { background: rgba(245,243,237,.74); }
+.voice-reveal-root[data-theme="light"] .notice { background: rgba(248,246,240,.94); }

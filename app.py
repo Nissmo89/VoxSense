@@ -38,6 +38,11 @@ st.html(
       linear-gradient(180deg, #0b0a08 0%, #090807 58%, #070605 100%);
   }
 
+  html[data-voice-theme="light"] .stApp {
+    background: radial-gradient(ellipse 85% 48% at 50% -10%, #ffffff 0%, transparent 65%), linear-gradient(180deg, #f5f3ef 0%, #eeece7 100%);
+    color: #25231f;
+  }
+
   [data-testid="stAppViewContainer"],
   [data-testid="stMain"] {
     background: transparent;
@@ -120,14 +125,14 @@ st.html(
     margin-bottom: 0.3rem;
   }
 
-  [data-testid="stExpander"] {
-    border-color: rgba(232, 222, 203, 0.12) !important;
-    background: rgba(24, 21, 16, 0.55);
-  }
-
-  [data-testid="stExpander"] summary {
-    color: #cfc6b8;
-  }
+  html[data-voice-theme="light"] .vr-page-header { color: #25231f; border-color: rgba(45, 42, 35, 0.14); }
+  html[data-voice-theme="light"] .vr-page-kicker,
+  html[data-voice-theme="light"] .vr-page-subtitle,
+  html[data-voice-theme="light"] .vr-page-status,
+  html[data-voice-theme="light"] .vr-page-footer { color: #77736b; }
+  html[data-voice-theme="light"] .vr-page-title { color: #25231f; }
+  html[data-voice-theme="light"] [data-testid="stCaptionContainer"] { color: #77736b; }
+  html[data-voice-theme="light"] [data-testid="stPopover"] button { color: #36332e; border-color: rgba(45, 42, 35, 0.16); }
 
   .stFileUploader,
   .stButton button {
@@ -273,13 +278,12 @@ st.html(
 <header class="vr-page-header">
   <div>
     <p class="vr-page-kicker">VoxSense · voice analysis</p>
-    <h1 class="vr-page-title">The voice, in marble</h1>
+    <h1 class="vr-page-title">Voice, in marble</h1>
     <p class="vr-page-subtitle">
-      Speak for a few seconds. The existing classifier decides; a sculpture
-      emerges from the dark to carry its answer.
+      Speak. The gallery reveals the model’s prediction.
     </p>
   </div>
-  <span class="vr-page-status">Voice analysis</span>
+  <span class="vr-page-status">Private session</span>
 </header>
 """
 )
@@ -303,7 +307,7 @@ else:
         "session and is not stored."
     )
 
-with st.expander("Upload an audio file instead"):
+with st.popover("Upload", icon=":material/upload_file:", help="Analyse an audio file"):
     st.caption(
         "The same model and feature pipeline analyse the file. No result is "
         "shown until inference finishes."
@@ -340,7 +344,7 @@ with st.expander("Upload an audio file instead"):
             _remember_event(event_id, started_at)
             st.rerun()
 
-with st.expander("About the model and the gallery"):
+with st.popover("About", icon=":material/info:", help="About the model and gallery"):
     st.markdown(
         """
 The prediction comes from the project's unchanged Logistic Regression model

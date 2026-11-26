@@ -54,6 +54,7 @@ export class VoiceRevealUI {
   ).matches;
 
   private readonly recordButton: HTMLButtonElement;
+  private readonly themeButton: HTMLButtonElement;
   private readonly recordLabel: HTMLElement;
   private readonly recordHint: HTMLElement;
   private readonly cancelButton: HTMLButtonElement;
@@ -91,6 +92,7 @@ export class VoiceRevealUI {
     this.callbacks = callbacks;
 
     this.recordButton = this.require<HTMLButtonElement>("#record-button");
+    this.themeButton = this.require<HTMLButtonElement>("#theme-toggle");
     this.recordLabel = this.require<HTMLElement>("#record-label");
     this.recordHint = this.require<HTMLElement>("#record-hint");
     this.cancelButton = this.require<HTMLButtonElement>("#cancel-button");
@@ -116,12 +118,15 @@ export class VoiceRevealUI {
     this.liveRegion = this.require<HTMLElement>("#live-region");
 
     this.recordButton.addEventListener("click", this.handleRecordClick);
+    this.themeButton.addEventListener("click", this.handleThemeClick);
     this.cancelButton.addEventListener("click", this.handleCancelClick);
     this.replayButton.addEventListener("click", this.handleReplayClick);
     this.noticeRetry.addEventListener("click", this.handleRetryClick);
     this.assetRetry.addEventListener("click", this.handleRetryAssetsClick);
 
     this.setPhase("boot");
+    const savedTheme = window.localStorage.getItem("voice-reveal-theme");
+    this.setTheme(savedTheme === "light" ? "light" : "dark");
   }
 
   setReady(ready: boolean): void {
@@ -339,6 +344,7 @@ export class VoiceRevealUI {
 
   dispose(): void {
     this.recordButton.removeEventListener("click", this.handleRecordClick);
+    this.themeButton.removeEventListener("click", this.handleThemeClick);
     this.cancelButton.removeEventListener("click", this.handleCancelClick);
     this.replayButton.removeEventListener("click", this.handleReplayClick);
     this.noticeRetry.removeEventListener("click", this.handleRetryClick);
@@ -384,6 +390,19 @@ export class VoiceRevealUI {
     }
     this.callbacks.onRecordClick();
   };
+
+  private handleThemeClick = (): void => {
+    this.setTheme(this.root.dataset.theme === "light" ? "dark" : "light");
+  };
+
+  private setTheme(theme: "dark" | "light"): void {
+    this.root.dataset.theme = theme;
+    document.documentElement.dataset.voiceTheme = theme;
+    window.localStorage.setItem("voice-reveal-theme", theme);
+    const next = theme === "dark" ? "light" : "dark";
+    this.themeButton.setAttribute("aria-label", `Switch to ${next} theme`);
+    this.themeButton.setAttribute("aria-pressed", theme === "light" ? "true" : "false");
+  }
 
   private handleCancelClick = (): void => {
     this.callbacks.onCancelClick();

@@ -18,6 +18,10 @@ _VOICE_REVEAL_COMPONENT = st.components.v2.component(
     css="index.css",
     html="""
 <div class="voice-reveal-root" data-phase="boot">
+  <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light theme" title="Switch theme">
+    <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+    <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.4A8.5 8.5 0 0 1 8.6 3.8 8.5 8.5 0 1 0 20.2 15.4Z"/></svg>
+  </button>
   <section class="stage" aria-label="Dark sculpture gallery with two marble figures">
     <canvas id="gallery-canvas" aria-label="Two marble statues in a dark gallery"></canvas>
 
@@ -62,10 +66,11 @@ _VOICE_REVEAL_COMPONENT = st.components.v2.component(
     </div>
   </section>
 
+  <div class="waveform" aria-hidden="true">
+    <canvas id="waveform-canvas"></canvas>
+  </div>
+
   <div class="controls">
-    <div class="waveform" aria-hidden="true">
-      <canvas id="waveform-canvas"></canvas>
-    </div>
 
     <div class="control-row">
       <button
@@ -86,10 +91,7 @@ _VOICE_REVEAL_COMPONENT = st.components.v2.component(
             <rect x="7" y="7" width="10" height="10" rx="1" />
           </svg>
         </span>
-        <span>
-          <span class="record-label" id="record-label">Begin recording</span>
-          <span class="record-hint" id="record-hint">Speak for a few seconds</span>
-        </span>
+        <span class="record-label sr-only" id="record-label">Begin recording</span>
       </button>
       <button
         class="cancel-button"
@@ -102,6 +104,8 @@ _VOICE_REVEAL_COMPONENT = st.components.v2.component(
       </button>
       <span class="timer" id="timer" hidden aria-label="Recording time">0:00</span>
     </div>
+
+    <p class="record-hint" id="record-hint">Speak for a few seconds</p>
 
     <button
       class="replay-button"
