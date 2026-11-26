@@ -29,9 +29,15 @@ interface StatueRig {
   group: THREE.Group;
   keyLight: THREE.DirectionalLight;
   rimLight: THREE.DirectionalLight;
+  accentSpot: THREE.SpotLight;
   layer: number;
   loaded: boolean;
   bounds: THREE.Box3;
+}
+
+interface MaterialDefaults {
+  opacity: number;
+  transparent: boolean;
 }
 
 interface StatueDefinition {
@@ -100,6 +106,7 @@ export class GalleryScene {
   private readonly pendingLoads = new Set<Prediction>();
   private readonly progress = new Map<Prediction, { loaded: number; total: number }>();
   private readonly missing = new Set<Prediction>();
+  private readonly materialDefaults = new WeakMap<THREE.Material, MaterialDefaults>();
 
   private ambient: THREE.HemisphereLight | null = null;
   private fill: THREE.DirectionalLight | null = null;
@@ -122,6 +129,17 @@ export class GalleryScene {
   private stageWidth = 1;
   private stageHeight = 1;
   private initialLoadDone = false;
+
+  // Parallax cursor tracking
+  private parallaxX = 0;
+  private parallaxY = 0;
+  private targetParallaxX = 0;
+  private targetParallaxY = 0;
+  private readonly handlePointerMove: (e: MouseEvent | TouchEvent) => void;
+  private readonly resetPointer = (): void => {
+    this.targetParallaxX = 0;
+    this.targetParallaxY = 0;
+  };
 
   constructor(
     container: HTMLElement,
@@ -162,9 +180,32 @@ export class GalleryScene {
     this.setupDust();
     this.resize();
 
+    this.handlePointerMove = (e: MouseEvent | TouchEvent) => {
+      const rect = this.container.getBoundingClientRect();
+      let clientX: number;
+      let clientY: number;
+      if (e instanceof TouchEvent && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else if (e instanceof MouseEvent) {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      } else {
+        return;
+      }
+      const nx = ((clientX - rect.left) / rect.width) * 2 - 1;
+      const ny = ((clientY - rect.top) / rect.height) * 2 - 1;
+      this.targetParallaxX = clamp(nx, -1, 1) * 0.12;
+      this.targetParallaxY = clamp(ny, -1, 1) * -0.065;
+    };
+
     this.reducedMotionQuery.addEventListener("change", this.handleMotionPreference);
     this.canvas.addEventListener("webglcontextlost", this.handleContextLost, false);
     document.addEventListener("visibilitychange", this.handleVisibilityChange);
+    this.container.addEventListener("mousemove", this.handlePointerMove);
+    this.container.addEventListener("touchmove", this.handlePointerMove, { passive: true });
+    this.container.addEventListener("mouseleave", this.resetPointer);
+    this.container.addEventListener("touchend", this.resetPointer, { passive: true });
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
@@ -198,14 +239,21 @@ export class GalleryScene {
     this.killStateTimeline();
     this.tweenLightsTo(IDLE_KEY, IDLE_RIM, duration);
     this.applyFraming(this.computeIdleFraming(), duration);
+    // Reset any recession effect on all statues
+    this.resetRecession(duration);
+    this.tweenDustColor(0xfff0dc, duration);
   }
 
   enterListeningState(): void {
     this.phase = "listening";
     this.currentReveal = null;
     this.killStateTimeline();
+    // Put the figures back in their original two-model composition before
+    // calculating the idle camera framing for a new recording.
+    this.resetRecession(0.75, true);
     this.tweenLightsTo(LISTENING_KEY, LISTENING_RIM, 0.75);
     this.applyFraming(this.computeIdleFraming(), 0.9);
+    this.tweenDustColor(0xfff0dc, 0.75);
   }
 
   enterProcessingState(): void {
@@ -213,6 +261,8 @@ export class GalleryScene {
     this.currentReveal = null;
     this.killStateTimeline();
     this.tweenLightsTo(PROCESSING_KEY, PROCESSING_RIM, 0.55);
+    this.resetRecession(0.55);
+    this.tweenDustColor(0xfff0dc, 0.55);
   }
 
   enterUncertainState(): void {
@@ -221,6 +271,8 @@ export class GalleryScene {
     this.killStateTimeline();
     this.tweenLightsTo(IDLE_KEY, IDLE_RIM, 0.9);
     this.applyFraming(this.computeIdleFraming(), 0.9);
+    this.resetRecession(0.9);
+    this.tweenDustColor(0xfff0dc, 0.9);
   }
 
   enterErrorState(): void {
@@ -229,6 +281,8 @@ export class GalleryScene {
     this.killStateTimeline();
     this.tweenLightsTo(IDLE_KEY, IDLE_RIM, 0.7);
     this.applyFraming(this.computeIdleFraming(), 0.7);
+    this.resetRecession(0.7);
+    this.tweenDustColor(0xfff0dc, 0.7);
   }
 
   /**
@@ -250,9 +304,38 @@ export class GalleryScene {
     const reduced = this.reducedMotion;
     const lightDuration = reduced ? 0.35 : 2.2;
 
+    // Gender-specific light colors for selected statue
+    const isMale = prediction === "M";
+    const revealKeyColor = isMale ? 0xffd28a : 0xa8d8ff;
+    const revealRimColor = isMale ? 0xc8963c : 0x7ab8f5;
+    const dustColor = isMale ? 0xffd28a : 0xa8d8ff;
+    if (this.dust) {
+      const material = this.dust.material as THREE.PointsMaterial;
+      timeline.to(material.color, {
+        r: ((dustColor >> 16) & 0xff) / 255,
+        g: ((dustColor >> 8) & 0xff) / 255,
+        b: (dustColor & 0xff) / 255,
+        duration: lightDuration,
+        ease: "power2.inOut",
+      }, 0.3);
+    }
+
     for (const rig of Object.values(this.statues)) {
       if (!rig) continue;
       if (rig.prediction === prediction) {
+        // Animate to colored key/rim light
+        timeline.to(
+          rig.keyLight.color,
+          {
+            r: ((revealKeyColor >> 16) & 0xff) / 255,
+            g: ((revealKeyColor >> 8) & 0xff) / 255,
+            b: (revealKeyColor & 0xff) / 255,
+            duration: lightDuration,
+            ease: "power2.inOut",
+            overwrite: "auto",
+          },
+          0.12,
+        );
         timeline.to(
           rig.keyLight,
           {
@@ -264,6 +347,18 @@ export class GalleryScene {
           0.12,
         );
         timeline.to(
+          rig.rimLight.color,
+          {
+            r: ((revealRimColor >> 16) & 0xff) / 255,
+            g: ((revealRimColor >> 8) & 0xff) / 255,
+            b: (revealRimColor & 0xff) / 255,
+            duration: reduced ? 0.35 : 1.85,
+            ease: "power2.inOut",
+            overwrite: "auto",
+          },
+          0.42,
+        );
+        timeline.to(
           rig.rimLight,
           {
             intensity: REVEAL_RIM,
@@ -273,7 +368,77 @@ export class GalleryScene {
           },
           0.42,
         );
+        timeline.to(
+          rig.accentSpot,
+          {
+            intensity: prediction === "F" ? 1.25 : 0,
+            duration: reduced ? 0.35 : 1.8,
+            ease: "power2.inOut",
+            overwrite: "auto",
+          },
+          0.28,
+        );
+        if (prediction === "F") {
+          timeline.to(
+            rig.accentSpot.position,
+            { x: STATUES.M.x + 0.48, duration: reduced ? 0.25 : 1.0, ease: "power2.out" },
+            0,
+          );
+          timeline.to(
+            rig.accentSpot.target.position,
+            { x: STATUES.M.x, duration: reduced ? 0.25 : 1.0, ease: "power2.out" },
+            0,
+          );
+        }
+        // Reset selected statue recession (bring to normal)
+        timeline.to(
+          rig.group.position,
+          {
+            // Keep either winning figure in the right-hand spotlight. This
+            // leaves the lower-left result label unobstructed.
+            x: STATUES.M.x,
+            duration: reduced ? 0.25 : 1.0,
+            ease: "power2.out",
+            overwrite: "auto",
+          },
+          0,
+        );
+        timeline.to(
+          rig.group.scale,
+          {
+            x: 1, y: 1, z: 1,
+            duration: reduced ? 0.25 : 1.0,
+            ease: "power2.out",
+            overwrite: "auto",
+          },
+          0,
+        );
+        // A figure can become dimmed when it was the non-selected statue in
+        // the previous reveal. Always restore its source opacity as it wins.
+        rig.group.traverse((child) => {
+          if (!(child instanceof THREE.Mesh)) return;
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          for (const material of materials) {
+            const defaults = this.materialDefaults.get(material) ?? {
+              opacity: 1,
+              transparent: false,
+            };
+            material.transparent = true;
+            timeline.to(
+              material,
+              {
+                opacity: defaults.opacity,
+                duration: reduced ? 0.25 : 0.8,
+                ease: "power2.out",
+                overwrite: "auto",
+                onComplete: () => { material.transparent = defaults.transparent; },
+              },
+              0,
+            );
+          }
+        });
       } else {
+        // Dim the non-selected statue
         timeline.to(
           rig.keyLight,
           {
@@ -294,6 +459,49 @@ export class GalleryScene {
           },
           0,
         );
+        // Recession: move sideways + scale down + fade materials
+        const otherDef = STATUES[rig.prediction];
+        const recessX = otherDef.x + (rig.prediction === "M" ? 0.6 : -0.6);
+        timeline.to(
+          rig.group.position,
+          {
+            x: recessX,
+            duration: reduced ? 0.25 : 1.1,
+            ease: "none",
+            overwrite: "auto",
+          },
+          0,
+        );
+        timeline.to(
+          rig.group.scale,
+          {
+            x: 0.62, y: 0.62, z: 0.62,
+            duration: reduced ? 0.25 : 1.1,
+            ease: "none",
+            overwrite: "auto",
+          },
+          0,
+        );
+        // Fade materials
+        rig.group.traverse((child) => {
+          if (!(child instanceof THREE.Mesh)) return;
+          const materials = Array.isArray(child.material) ? child.material : [child.material];
+          for (const mat of materials) {
+            if (mat && "transparent" in mat) {
+              (mat as THREE.MeshStandardMaterial).transparent = true;
+              timeline.to(
+                mat,
+                {
+                  opacity: 0.14,
+                  duration: reduced ? 0.25 : 1.1,
+                  ease: "none",
+                  overwrite: "auto",
+                },
+                0,
+              );
+            }
+          }
+        });
       }
     }
 
@@ -337,12 +545,13 @@ export class GalleryScene {
     this.disposed = true;
 
     this.killStateTimeline();
-    gsap.killTweensOf(this.camera.position);
-    gsap.killTweensOf(this.cameraTarget);
     for (const rig of Object.values(this.statues)) {
       if (!rig) continue;
       gsap.killTweensOf(rig.keyLight);
       gsap.killTweensOf(rig.rimLight);
+      gsap.killTweensOf(rig.accentSpot);
+      gsap.killTweensOf(rig.accentSpot.position);
+      gsap.killTweensOf(rig.accentSpot.target.position);
     }
 
     this.stopLoop();
@@ -358,6 +567,10 @@ export class GalleryScene {
       false,
     );
     document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+    this.container.removeEventListener("mousemove", this.handlePointerMove);
+    this.container.removeEventListener("touchmove", this.handlePointerMove);
+    this.container.removeEventListener("mouseleave", this.resetPointer);
+    this.container.removeEventListener("touchend", this.resetPointer);
 
     const geometries = new Set<THREE.BufferGeometry>();
     const materials = new Set<THREE.Material>();
@@ -652,11 +865,19 @@ export class GalleryScene {
             metalness: 0,
             envMapIntensity: 0.3,
           });
+          this.materialDefaults.set(standard, {
+            opacity: standard.opacity,
+            transparent: standard.transparent,
+          });
           basic.dispose();
           return standard;
         }
 
         const standard = material as THREE.MeshStandardMaterial;
+        this.materialDefaults.set(standard, {
+          opacity: standard.opacity,
+          transparent: standard.transparent,
+        });
         if ("envMapIntensity" in standard) {
           standard.envMapIntensity = 0.42;
         }
@@ -696,12 +917,26 @@ export class GalleryScene {
     rimLight.layers.set(definition.layer);
     this.scene.add(rimLight, rimLight.target);
 
+    const accentSpot = new THREE.SpotLight(
+      0xff78ba,
+      0,
+      3.8,
+      Math.PI / 5,
+      0.78,
+      1.2,
+    );
+    accentSpot.position.set(definition.x + 0.48, 1.72, 1.45);
+    accentSpot.target.position.set(definition.x, 0.78, 0);
+    accentSpot.layers.set(definition.layer);
+    this.scene.add(accentSpot, accentSpot.target);
+
     const bounds = new THREE.Box3().setFromObject(group);
     return {
       prediction: definition.prediction,
       group,
       keyLight,
       rimLight,
+      accentSpot,
       layer: definition.layer,
       loaded: true,
       bounds,
@@ -765,6 +1000,9 @@ export class GalleryScene {
     const aspect = this.stageWidth / Math.max(1, this.stageHeight);
     const mobile = aspect < 0.82;
     const selectedBounds = new THREE.Box3().setFromObject(selected.group);
+    selectedBounds.translate(
+      new THREE.Vector3(STATUES.M.x - selected.group.position.x, 0, 0),
+    );
     const selectedSize = selectedBounds.getSize(new THREE.Vector3());
     const selectedCenter = selectedBounds.getCenter(new THREE.Vector3());
 
@@ -890,12 +1128,100 @@ export class GalleryScene {
         ease: "power2.inOut",
         overwrite: "auto",
       });
+      gsap.to(rig.accentSpot, {
+        intensity: 0,
+        duration: effectiveDuration,
+        ease: "power2.inOut",
+        overwrite: "auto",
+      });
+      gsap.to(rig.accentSpot.position, {
+        x: STATUES[rig.prediction].x + 0.48,
+        duration: effectiveDuration,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+      gsap.to(rig.accentSpot.target.position, {
+        x: STATUES[rig.prediction].x,
+        duration: effectiveDuration,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
     }
   }
 
   private killStateTimeline(): void {
     this.stateTimeline?.kill();
     this.stateTimeline = null;
+  }
+
+  private tweenDustColor(color: number, duration: number): void {
+    if (!this.dust) return;
+    const material = this.dust.material as THREE.PointsMaterial;
+    gsap.to(material.color, {
+      r: ((color >> 16) & 0xff) / 255,
+      g: ((color >> 8) & 0xff) / 255,
+      b: (color & 0xff) / 255,
+      duration: this.reducedMotion ? Math.min(duration, 0.25) : duration,
+      ease: "power2.inOut",
+      overwrite: "auto",
+    });
+  }
+
+  private resetRecession(duration: number, restorePositionsNow = false): void {
+    const effectiveDuration = this.reducedMotion ? Math.min(duration, 0.25) : duration;
+    for (const rig of Object.values(this.statues)) {
+      if (!rig) continue;
+      if (restorePositionsNow) {
+        gsap.killTweensOf(rig.group.position);
+        gsap.killTweensOf(rig.group.scale);
+        rig.group.position.x = STATUES[rig.prediction].x;
+        rig.group.scale.setScalar(1);
+      }
+      gsap.to(rig.keyLight.color, {
+        r: 1, g: 0.945, b: 0.863,
+        duration: effectiveDuration,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+      gsap.to(rig.rimLight.color, {
+        r: 0.863, g: 0.906, b: 0.949,
+        duration: effectiveDuration,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+      gsap.to(rig.group.position, {
+        x: STATUES[rig.prediction].x,
+        duration: effectiveDuration,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+      gsap.to(rig.group.scale, {
+        x: 1, y: 1, z: 1,
+        duration: effectiveDuration,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+      rig.group.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        for (const material of materials) {
+          if (!("opacity" in material)) continue;
+          const opacityMaterial = material as THREE.Material;
+          const defaults = this.materialDefaults.get(opacityMaterial) ?? {
+            opacity: 1,
+            transparent: false,
+          };
+          opacityMaterial.transparent = true;
+          gsap.to(opacityMaterial, {
+            opacity: defaults.opacity,
+            duration: effectiveDuration,
+            ease: "power2.out",
+            overwrite: "auto",
+            onComplete: () => { opacityMaterial.transparent = defaults.transparent; },
+          });
+        }
+      });
+    }
   }
 
   private createRadialTexture(
@@ -964,6 +1290,28 @@ export class GalleryScene {
           baseZ + Math.cos(elapsed * 0.09 + index * 0.7) * 0.008;
       }
       positionAttribute.needsUpdate = true;
+    }
+
+    if (!this.reducedMotion) {
+      // Smooth parallax interpolation
+      const lerpFactor = 1 - Math.pow(0.08, delta);
+      this.parallaxX += (this.targetParallaxX - this.parallaxX) * lerpFactor;
+      this.parallaxY += (this.targetParallaxY - this.parallaxY) * lerpFactor;
+
+      // Idle breathing animation + parallax for each statue group
+      for (const rig of Object.values(this.statues)) {
+        if (!rig || !rig.loaded) continue;
+        // Breathing: subtle vertical bob at ~0.4 Hz
+        const breathOffset = Math.sin(elapsed * 2.513) * 0.004;
+        // Store original base Y (at scene add time it's 0)
+        const baseY = 0;
+        // Apply parallax rotation
+        // The model keeps its authored gallery angle; only its parent rig moves.
+        rig.group.rotation.y = this.parallaxX;
+        rig.group.rotation.x = this.parallaxY * 0.5;
+        // Vertical breathing
+        rig.group.position.y = baseY + breathOffset;
+      }
     }
 
     this.camera.lookAt(this.cameraTarget);
