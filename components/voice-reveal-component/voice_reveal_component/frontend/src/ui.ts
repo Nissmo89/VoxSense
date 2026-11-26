@@ -92,7 +92,9 @@ export class VoiceRevealUI {
     this.callbacks = callbacks;
 
     this.recordButton = this.require<HTMLButtonElement>("#record-button");
-    this.themeButton = this.require<HTMLButtonElement>("#theme-toggle");
+    this.themeButton =
+      this.root.querySelector<HTMLButtonElement>("#theme-toggle") ??
+      this.createThemeButton();
     this.recordLabel = this.require<HTMLElement>("#record-label");
     this.recordHint = this.require<HTMLElement>("#record-hint");
     this.cancelButton = this.require<HTMLButtonElement>("#cancel-button");
@@ -370,6 +372,28 @@ export class VoiceRevealUI {
       throw new Error(`Voice reveal UI is missing ${selector}`);
     }
     return element;
+  }
+
+  private createThemeButton(): HTMLButtonElement {
+    // The Python component template and its built JavaScript can briefly be
+    // out of sync during a hosted redeploy. Keep the newer UI compatible with
+    // an older template by creating the theme control on the client.
+    const button = document.createElement("button");
+    button.className = "theme-toggle";
+    button.id = "theme-toggle";
+    button.type = "button";
+    button.setAttribute("aria-label", "Switch to light theme");
+    button.title = "Switch theme";
+    button.innerHTML = `
+      <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
+      </svg>
+      <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M20.2 15.4A8.5 8.5 0 0 1 8.6 3.8 8.5 8.5 0 1 0 20.2 15.4Z" />
+      </svg>`;
+    this.root.prepend(button);
+    return button;
   }
 
   private syncRecordButton(): void {
