@@ -994,3 +994,115 @@
 .voice-reveal-root[data-theme="light"] .result-caveat { color: #666157; }
 .voice-reveal-root[data-theme="light"] .loading { background: rgba(245,243,237,.74); }
 .voice-reveal-root[data-theme="light"] .notice { background: rgba(248,246,240,.94); }
+
+/* Authoritative record control layout: keep its three visual layers concentric. */
+.voice-reveal-root #record-button {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  position: relative !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  flex: 0 0 56px !important;
+  width: 56px !important;
+  min-width: 56px !important;
+  max-width: 56px !important;
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  overflow: visible !important;
+  border: 1px solid rgba(232, 222, 203, 0.24) !important;
+  border-radius: 50% !important;
+  background: rgba(24, 22, 19, 0.82) !important;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28) !important;
+  line-height: 0 !important;
+  text-align: center !important;
+  cursor: pointer !important;
+}
+.voice-reveal-root #record-button:hover:not(:disabled) {
+  border-color: rgba(216, 192, 150, 0.55) !important;
+  box-shadow: 0 0 0 1px rgba(216, 192, 150, 0.1), 0 14px 42px rgba(0, 0, 0, 0.48) !important;
+}
+.voice-reveal-root[data-phase="listening"] #record-button {
+  border-color: rgba(216, 192, 150, 0.68) !important;
+  background: rgba(48, 41, 31, 0.98) !important;
+  box-shadow: 0 0 0 1px rgba(216, 192, 150, 0.14), 0 0 46px rgba(216, 192, 150, 0.13), 0 14px 44px rgba(0, 0, 0, 0.48) !important;
+}
+
+.voice-reveal-root #record-button .record-icon {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  flex: none !important;
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: translate(-50%, -50%) !important;
+  border: 1px solid rgba(216, 192, 150, 0.36) !important;
+  border-radius: 50% !important;
+}
+.voice-reveal-root[data-phase="listening"] #record-button .record-icon {
+  border-color: rgba(242, 226, 196, 0.62) !important;
+  background: rgba(216, 192, 150, 0.16) !important;
+}
+
+.voice-reveal-root #record-button .record-icon > svg {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 18px !important;
+  min-width: 18px !important;
+  height: 18px !important;
+  min-height: 18px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: translate(-50%, -50%) !important;
+  fill: none !important;
+  stroke: var(--vr-gold) !important;
+  stroke-width: 1.6px !important;
+  pointer-events: none !important;
+}
+
+.voice-reveal-root #record-button .icon-mic {
+  display: block !important;
+}
+.voice-reveal-root #record-button .icon-stop {
+  display: none !important;
+}
+
+.voice-reveal-root[data-phase="listening"] #record-button .icon-mic,
+.voice-reveal-root #record-button.is-busy .record-icon > svg {
+  display: none !important;
+}
+
+.voice-reveal-root[data-phase="listening"] #record-button .icon-stop {
+  display: block !important;
+}
+
+.voice-reveal-root #record-button.is-busy .record-icon::after {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  display: block !important;
+  width: 15px !important;
+  height: 15px !important;
+  margin: 0 !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.voice-reveal-root[data-theme="light"] #record-button {
+  border-color: rgba(50, 46, 39, 0.22) !important;
+  background: rgba(248, 246, 240, 0.9) !important;
+}
+.voice-reveal-root[data-theme="light"] #record-button .record-icon > svg {
+  stroke: #806337 !important;
+}
