@@ -15460,6 +15460,7 @@ var gg = String(import.meta.url), _g = (e) => new URL(`models/${e}`, new URL("."
 	pendingLoads = /* @__PURE__ */ new Set();
 	progress = /* @__PURE__ */ new Map();
 	missing = /* @__PURE__ */ new Set();
+	materialDefaults = /* @__PURE__ */ new WeakMap();
 	ambient = null;
 	fill = null;
 	floor = null;
@@ -15480,13 +15481,28 @@ var gg = String(import.meta.url), _g = (e) => new URL(`models/${e}`, new URL("."
 	stageWidth = 1;
 	stageHeight = 1;
 	initialLoadDone = !1;
+	parallaxX = 0;
+	parallaxY = 0;
+	targetParallaxX = 0;
+	targetParallaxY = 0;
+	handlePointerMove;
+	resetPointer = () => {
+		this.targetParallaxX = 0, this.targetParallaxY = 0;
+	};
 	constructor(e, t, n) {
 		this.container = e, this.canvas = t, this.callbacks = n, this.renderer = new fh({
 			canvas: t,
 			antialias: !0,
 			alpha: !0,
 			powerPreference: "high-performance"
-		}), this.renderer.setClearColor(0, 0), this.renderer.outputColorSpace = Ua, this.renderer.toneMapping = 4, this.renderer.toneMappingExposure = 1.06, this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75)), this.scene = new Hs(), this.scene.fog = new Vs(657672, 4.2, 9.5), this.camera = new Ed(32, 1, .05, 40), this.camera.position.set(0, .7, 3.2), this.camera.layers.enable(0), this.camera.layers.enable(1), this.camera.layers.enable(2), this.stageWidth = Math.max(1, e.clientWidth), this.stageHeight = Math.max(1, e.clientHeight), this.setupEnvironment(), this.setupLights(), this.setupFloor(), this.setupDust(), this.resize(), this.reducedMotionQuery.addEventListener("change", this.handleMotionPreference), this.canvas.addEventListener("webglcontextlost", this.handleContextLost, !1), document.addEventListener("visibilitychange", this.handleVisibilityChange), this.resizeObserver = new ResizeObserver(() => this.resize()), this.resizeObserver.observe(e), this.startLoop(), this.loadMissingStatues();
+		}), this.renderer.setClearColor(0, 0), this.renderer.outputColorSpace = Ua, this.renderer.toneMapping = 4, this.renderer.toneMappingExposure = 1.06, this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75)), this.scene = new Hs(), this.scene.fog = new Vs(657672, 4.2, 9.5), this.camera = new Ed(32, 1, .05, 40), this.camera.position.set(0, .7, 3.2), this.camera.layers.enable(0), this.camera.layers.enable(1), this.camera.layers.enable(2), this.stageWidth = Math.max(1, e.clientWidth), this.stageHeight = Math.max(1, e.clientHeight), this.setupEnvironment(), this.setupLights(), this.setupFloor(), this.setupDust(), this.resize(), this.handlePointerMove = (e) => {
+			let t = this.container.getBoundingClientRect(), n, r;
+			if (e instanceof TouchEvent && e.touches.length > 0) n = e.touches[0].clientX, r = e.touches[0].clientY;
+			else if (e instanceof MouseEvent) n = e.clientX, r = e.clientY;
+			else return;
+			let i = (n - t.left) / t.width * 2 - 1, a = (r - t.top) / t.height * 2 - 1;
+			this.targetParallaxX = Dg(i, -1, 1) * .12, this.targetParallaxY = Dg(a, -1, 1) * -.065;
+		}, this.reducedMotionQuery.addEventListener("change", this.handleMotionPreference), this.canvas.addEventListener("webglcontextlost", this.handleContextLost, !1), document.addEventListener("visibilitychange", this.handleVisibilityChange), this.container.addEventListener("mousemove", this.handlePointerMove), this.container.addEventListener("touchmove", this.handlePointerMove, { passive: !0 }), this.container.addEventListener("mouseleave", this.resetPointer), this.container.addEventListener("touchend", this.resetPointer, { passive: !0 }), this.resizeObserver = new ResizeObserver(() => this.resize()), this.resizeObserver.observe(e), this.startLoop(), this.loadMissingStatues();
 	}
 	get isReducedMotion() {
 		return this.reducedMotion;
@@ -15501,46 +15517,141 @@ var gg = String(import.meta.url), _g = (e) => new URL(`models/${e}`, new URL("."
 		this.disposed || (this.missing.clear(), this.callbacks.onProgress(0), this.loadMissingStatues());
 	}
 	enterIdleState(e = .8) {
-		this.phase = "idle", this.currentReveal = null, this.killStateTimeline(), this.tweenLightsTo(yg, bg, e), this.applyFraming(this.computeIdleFraming(), e);
+		this.phase = "idle", this.currentReveal = null, this.killStateTimeline(), this.tweenLightsTo(yg, bg, e), this.applyFraming(this.computeIdleFraming(), e), this.resetRecession(e), this.tweenDustColor(16773340, e);
 	}
 	enterListeningState() {
-		this.phase = "listening", this.currentReveal = null, this.killStateTimeline(), this.tweenLightsTo(xg, Sg, .75), this.applyFraming(this.computeIdleFraming(), .9);
+		this.phase = "listening", this.currentReveal = null, this.killStateTimeline(), this.resetRecession(.75, !0), this.tweenLightsTo(xg, Sg, .75), this.applyFraming(this.computeIdleFraming(), .9), this.tweenDustColor(16773340, .75);
 	}
 	enterProcessingState() {
-		this.phase = "processing", this.currentReveal = null, this.killStateTimeline(), this.tweenLightsTo(Cg, wg, .55);
+		this.phase = "processing", this.currentReveal = null, this.killStateTimeline(), this.tweenLightsTo(Cg, wg, .55), this.resetRecession(.55), this.tweenDustColor(16773340, .55);
 	}
 	enterUncertainState() {
-		this.phase = "uncertain", this.currentReveal = null, this.killStateTimeline(), this.tweenLightsTo(yg, bg, .9), this.applyFraming(this.computeIdleFraming(), .9);
+		this.phase = "uncertain", this.currentReveal = null, this.killStateTimeline(), this.tweenLightsTo(yg, bg, .9), this.applyFraming(this.computeIdleFraming(), .9), this.resetRecession(.9), this.tweenDustColor(16773340, .9);
 	}
 	enterErrorState() {
-		this.phase = "error", this.currentReveal = null, this.killStateTimeline(), this.tweenLightsTo(yg, bg, .7), this.applyFraming(this.computeIdleFraming(), .7);
+		this.phase = "error", this.currentReveal = null, this.killStateTimeline(), this.tweenLightsTo(yg, bg, .7), this.applyFraming(this.computeIdleFraming(), .7), this.resetRecession(.7), this.tweenDustColor(16773340, .7);
 	}
 	createRevealTimeline(e) {
 		let t = this.statues[e];
 		if (!t || !t.loaded) return null;
 		this.phase = "reveal", this.currentReveal = e, this.killStateTimeline();
-		let n = gi.timeline({ paused: !0 }), r = this.reducedMotion, i = r ? .35 : 2.2;
-		for (let t of Object.values(this.statues)) t && (t.prediction === e ? (n.to(t.keyLight, {
-			intensity: Tg,
-			duration: i,
-			ease: "power2.inOut",
-			overwrite: "auto"
-		}, .12), n.to(t.rimLight, {
-			intensity: Eg,
-			duration: r ? .35 : 1.85,
-			ease: "power2.inOut",
-			overwrite: "auto"
-		}, .42)) : (n.to(t.keyLight, {
-			intensity: yg,
-			duration: r ? .25 : 1.1,
-			ease: "power2.out",
-			overwrite: "auto"
-		}, 0), n.to(t.rimLight, {
-			intensity: bg,
-			duration: r ? .25 : 1.1,
-			ease: "power2.out",
-			overwrite: "auto"
-		}, 0)));
+		let n = gi.timeline({ paused: !0 }), r = this.reducedMotion, i = r ? .35 : 2.2, a = e === "M", o = a ? 16765578 : 11065599, s = a ? 13145660 : 8042741, c = a ? 16765578 : 11065599;
+		if (this.dust) {
+			let e = this.dust.material;
+			n.to(e.color, {
+				r: (c >> 16 & 255) / 255,
+				g: (c >> 8 & 255) / 255,
+				b: (c & 255) / 255,
+				duration: i,
+				ease: "power2.inOut"
+			}, .3);
+		}
+		for (let t of Object.values(this.statues)) if (t) {
+			if (t.prediction === e) n.to(t.keyLight.color, {
+				r: (o >> 16 & 255) / 255,
+				g: (o >> 8 & 255) / 255,
+				b: (o & 255) / 255,
+				duration: i,
+				ease: "power2.inOut",
+				overwrite: "auto"
+			}, .12), n.to(t.keyLight, {
+				intensity: Tg,
+				duration: i,
+				ease: "power2.inOut",
+				overwrite: "auto"
+			}, .12), n.to(t.rimLight.color, {
+				r: (s >> 16 & 255) / 255,
+				g: (s >> 8 & 255) / 255,
+				b: (s & 255) / 255,
+				duration: r ? .35 : 1.85,
+				ease: "power2.inOut",
+				overwrite: "auto"
+			}, .42), n.to(t.rimLight, {
+				intensity: Eg,
+				duration: r ? .35 : 1.85,
+				ease: "power2.inOut",
+				overwrite: "auto"
+			}, .42), n.to(t.accentSpot, {
+				intensity: e === "F" ? 1.25 : 0,
+				duration: r ? .35 : 1.8,
+				ease: "power2.inOut",
+				overwrite: "auto"
+			}, .28), e === "F" && (n.to(t.accentSpot.position, {
+				x: vg.M.x + .48,
+				duration: r ? .25 : 1,
+				ease: "power2.out"
+			}, 0), n.to(t.accentSpot.target.position, {
+				x: vg.M.x,
+				duration: r ? .25 : 1,
+				ease: "power2.out"
+			}, 0)), n.to(t.group.position, {
+				x: vg.M.x,
+				duration: r ? .25 : 1,
+				ease: "power2.out",
+				overwrite: "auto"
+			}, 0), n.to(t.group.scale, {
+				x: 1,
+				y: 1,
+				z: 1,
+				duration: r ? .25 : 1,
+				ease: "power2.out",
+				overwrite: "auto"
+			}, 0), t.group.traverse((e) => {
+				if (!(e instanceof ul)) return;
+				let t = Array.isArray(e.material) ? e.material : [e.material];
+				for (let e of t) {
+					let t = this.materialDefaults.get(e) ?? {
+						opacity: 1,
+						transparent: !1
+					};
+					e.transparent = !0, n.to(e, {
+						opacity: t.opacity,
+						duration: r ? .25 : .8,
+						ease: "power2.out",
+						overwrite: "auto",
+						onComplete: () => {
+							e.transparent = t.transparent;
+						}
+					}, 0);
+				}
+			});
+			else {
+				n.to(t.keyLight, {
+					intensity: yg,
+					duration: r ? .25 : 1.1,
+					ease: "power2.out",
+					overwrite: "auto"
+				}, 0), n.to(t.rimLight, {
+					intensity: bg,
+					duration: r ? .25 : 1.1,
+					ease: "power2.out",
+					overwrite: "auto"
+				}, 0);
+				let e = vg[t.prediction].x + (t.prediction === "M" ? .6 : -.6);
+				n.to(t.group.position, {
+					x: e,
+					duration: r ? .25 : 1.1,
+					ease: "none",
+					overwrite: "auto"
+				}, 0), n.to(t.group.scale, {
+					x: .62,
+					y: .62,
+					z: .62,
+					duration: r ? .25 : 1.1,
+					ease: "none",
+					overwrite: "auto"
+				}, 0), t.group.traverse((e) => {
+					if (!(e instanceof ul)) return;
+					let t = Array.isArray(e.material) ? e.material : [e.material];
+					for (let e of t) e && "transparent" in e && (e.transparent = !0, n.to(e, {
+						opacity: .14,
+						duration: r ? .25 : 1.1,
+						ease: "none",
+						overwrite: "auto"
+					}, 0));
+				});
+			}
+		}
 		if (!r) {
 			let t = this.computeRevealFraming(e);
 			t && this.addFramingTweens(n, t, .12, 2.45);
@@ -15560,9 +15671,9 @@ var gg = String(import.meta.url), _g = (e) => new URL(`models/${e}`, new URL("."
 	}
 	dispose() {
 		if (this.disposed) return;
-		this.disposed = !0, this.killStateTimeline(), gi.killTweensOf(this.camera.position), gi.killTweensOf(this.cameraTarget);
-		for (let e of Object.values(this.statues)) e && (gi.killTweensOf(e.keyLight), gi.killTweensOf(e.rimLight));
-		this.stopLoop(), this.resizeObserver?.disconnect(), this.resizeObserver = null, this.reducedMotionQuery.removeEventListener("change", this.handleMotionPreference), this.canvas.removeEventListener("webglcontextlost", this.handleContextLost, !1), document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+		this.disposed = !0, this.killStateTimeline();
+		for (let e of Object.values(this.statues)) e && (gi.killTweensOf(e.keyLight), gi.killTweensOf(e.rimLight), gi.killTweensOf(e.accentSpot), gi.killTweensOf(e.accentSpot.position), gi.killTweensOf(e.accentSpot.target.position));
+		this.stopLoop(), this.resizeObserver?.disconnect(), this.resizeObserver = null, this.reducedMotionQuery.removeEventListener("change", this.handleMotionPreference), this.canvas.removeEventListener("webglcontextlost", this.handleContextLost, !1), document.removeEventListener("visibilitychange", this.handleVisibilityChange), this.container.removeEventListener("mousemove", this.handlePointerMove), this.container.removeEventListener("touchmove", this.handlePointerMove), this.container.removeEventListener("mouseleave", this.resetPointer), this.container.removeEventListener("touchend", this.resetPointer);
 		let e = /* @__PURE__ */ new Set(), t = /* @__PURE__ */ new Set(), n = /* @__PURE__ */ new Set();
 		this.scene.traverse((n) => {
 			let r = n;
@@ -15688,10 +15799,16 @@ var gg = String(import.meta.url), _g = (e) => new URL(`models/${e}`, new URL("."
 						metalness: 0,
 						envMapIntensity: .3
 					});
-					return t.dispose(), n;
+					return this.materialDefaults.set(n, {
+						opacity: n.opacity,
+						transparent: n.transparent
+					}), t.dispose(), n;
 				}
 				let r = e;
-				return "envMapIntensity" in r && (r.envMapIntensity = .42), r;
+				return this.materialDefaults.set(r, {
+					opacity: r.opacity,
+					transparent: r.transparent
+				}), "envMapIntensity" in r && (r.envMapIntensity = .42), r;
 			});
 			e.material = Array.isArray(r) ? i : i[0];
 		});
@@ -15705,15 +15822,18 @@ var gg = String(import.meta.url), _g = (e) => new URL(`models/${e}`, new URL("."
 		s.position.set(t.x - 1.2, 2.15, 2.5), s.target.position.set(t.x, .56, 0), s.layers.set(t.layer), this.scene.add(s, s.target);
 		let c = new Nd(14477298, bg);
 		c.position.set(t.x + 1, 1.65, -2.3), c.target.position.set(t.x, .72, 0), c.layers.set(t.layer), this.scene.add(c, c.target);
-		let l = new rc().setFromObject(o);
+		let l = new Od(16742586, 0, 3.8, Math.PI / 5, .78, 1.2);
+		l.position.set(t.x + .48, 1.72, 1.45), l.target.position.set(t.x, .78, 0), l.layers.set(t.layer), this.scene.add(l, l.target);
+		let u = new rc().setFromObject(o);
 		return {
 			prediction: t.prediction,
 			group: o,
 			keyLight: s,
 			rimLight: c,
+			accentSpot: l,
 			layer: t.layer,
 			loaded: !0,
-			bounds: l
+			bounds: u
 		};
 	}
 	computeCompositionBounds() {
@@ -15735,7 +15855,9 @@ var gg = String(import.meta.url), _g = (e) => new URL(`models/${e}`, new URL("."
 	computeRevealFraming(e) {
 		let t = this.statues[e];
 		if (!t) return null;
-		let n = this.stageWidth / Math.max(1, this.stageHeight), r = n < .82, i = new rc().setFromObject(t.group), a = i.getSize(new q()), o = i.getCenter(new q());
+		let n = this.stageWidth / Math.max(1, this.stageHeight), r = n < .82, i = new rc().setFromObject(t.group);
+		i.translate(new q(vg.M.x - t.group.position.x, 0, 0));
+		let a = i.getSize(new q()), o = i.getCenter(new q());
 		if (r) {
 			let e = a.y * .66, t = a.x * 1.1, r = i.max.y - e / 2, s = 1.18, c = Fo.degToRad(this.camera.fov), l = e * s / 2 / Math.tan(c / 2), u = t * s / 2 / (Math.tan(c / 2) * n), d = Math.max(l, u, 1.65);
 			return {
@@ -15795,10 +15917,86 @@ var gg = String(import.meta.url), _g = (e) => new URL(`models/${e}`, new URL("."
 			duration: r,
 			ease: "power2.inOut",
 			overwrite: "auto"
+		}), gi.to(n.accentSpot, {
+			intensity: 0,
+			duration: r,
+			ease: "power2.inOut",
+			overwrite: "auto"
+		}), gi.to(n.accentSpot.position, {
+			x: vg[n.prediction].x + .48,
+			duration: r,
+			ease: "power2.out",
+			overwrite: "auto"
+		}), gi.to(n.accentSpot.target.position, {
+			x: vg[n.prediction].x,
+			duration: r,
+			ease: "power2.out",
+			overwrite: "auto"
 		}));
 	}
 	killStateTimeline() {
 		this.stateTimeline?.kill(), this.stateTimeline = null;
+	}
+	tweenDustColor(e, t) {
+		if (!this.dust) return;
+		let n = this.dust.material;
+		gi.to(n.color, {
+			r: (e >> 16 & 255) / 255,
+			g: (e >> 8 & 255) / 255,
+			b: (e & 255) / 255,
+			duration: this.reducedMotion ? Math.min(t, .25) : t,
+			ease: "power2.inOut",
+			overwrite: "auto"
+		});
+	}
+	resetRecession(e, t = !1) {
+		let n = this.reducedMotion ? Math.min(e, .25) : e;
+		for (let e of Object.values(this.statues)) e && (t && (gi.killTweensOf(e.group.position), gi.killTweensOf(e.group.scale), e.group.position.x = vg[e.prediction].x, e.group.scale.setScalar(1)), gi.to(e.keyLight.color, {
+			r: 1,
+			g: .945,
+			b: .863,
+			duration: n,
+			ease: "power2.out",
+			overwrite: "auto"
+		}), gi.to(e.rimLight.color, {
+			r: .863,
+			g: .906,
+			b: .949,
+			duration: n,
+			ease: "power2.out",
+			overwrite: "auto"
+		}), gi.to(e.group.position, {
+			x: vg[e.prediction].x,
+			duration: n,
+			ease: "power2.out",
+			overwrite: "auto"
+		}), gi.to(e.group.scale, {
+			x: 1,
+			y: 1,
+			z: 1,
+			duration: n,
+			ease: "power2.out",
+			overwrite: "auto"
+		}), e.group.traverse((e) => {
+			if (!(e instanceof ul)) return;
+			let t = Array.isArray(e.material) ? e.material : [e.material];
+			for (let e of t) {
+				if (!("opacity" in e)) continue;
+				let t = e, r = this.materialDefaults.get(t) ?? {
+					opacity: 1,
+					transparent: !1
+				};
+				t.transparent = !0, gi.to(t, {
+					opacity: r.opacity,
+					duration: n,
+					ease: "power2.out",
+					overwrite: "auto",
+					onComplete: () => {
+						t.transparent = r.transparent;
+					}
+				});
+			}
+		}));
 	}
 	createRadialTexture(e, t) {
 		let n = document.createElement("canvas");
@@ -15819,15 +16017,23 @@ var gg = String(import.meta.url), _g = (e) => new URL(`models/${e}`, new URL("."
 	}
 	animate = () => {
 		if (!this.running || this.disposed) return;
-		this.clock.getDelta();
-		let e = this.clock.elapsedTime;
+		let e = this.clock.getDelta(), t = this.clock.elapsedTime;
 		if (this.dust && this.dustBase && !this.reducedMotion) {
-			let t = this.dust.geometry.getAttribute("position"), n = t.array;
-			for (let t = 0; t < n.length / 3; t += 1) {
-				let r = this.dustBase[t * 3], i = this.dustBase[t * 3 + 1], a = this.dustBase[t * 3 + 2];
-				n[t * 3] = r + Math.sin(e * .12 + t) * .012, n[t * 3 + 1] = i + (e * .012 + t * .13) % .18, n[t * 3 + 2] = a + Math.cos(e * .09 + t * .7) * .008;
+			let e = this.dust.geometry.getAttribute("position"), n = e.array;
+			for (let e = 0; e < n.length / 3; e += 1) {
+				let r = this.dustBase[e * 3], i = this.dustBase[e * 3 + 1], a = this.dustBase[e * 3 + 2];
+				n[e * 3] = r + Math.sin(t * .12 + e) * .012, n[e * 3 + 1] = i + (t * .012 + e * .13) % .18, n[e * 3 + 2] = a + Math.cos(t * .09 + e * .7) * .008;
 			}
-			t.needsUpdate = !0;
+			e.needsUpdate = !0;
+		}
+		if (!this.reducedMotion) {
+			let n = 1 - .08 ** e;
+			this.parallaxX += (this.targetParallaxX - this.parallaxX) * n, this.parallaxY += (this.targetParallaxY - this.parallaxY) * n;
+			for (let e of Object.values(this.statues)) {
+				if (!e || !e.loaded) continue;
+				let n = Math.sin(t * 2.513) * .004;
+				e.group.rotation.y = this.parallaxX, e.group.rotation.x = this.parallaxY * .5, e.group.position.y = 0 + n;
+			}
 		}
 		this.camera.lookAt(this.cameraTarget), this.renderer.render(this.scene, this.camera), this.animationFrame = requestAnimationFrame(this.animate);
 	};
@@ -16024,6 +16230,7 @@ var Pg = class {
 	callbacks;
 	reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 	recordButton;
+	themeButton;
 	recordLabel;
 	recordHint;
 	cancelButton;
@@ -16055,7 +16262,9 @@ var Pg = class {
 	noticeTimeline = null;
 	announceTimer = null;
 	constructor(e, t) {
-		this.root = e, this.callbacks = t, this.recordButton = this.require("#record-button"), this.recordLabel = this.require("#record-label"), this.recordHint = this.require("#record-hint"), this.cancelButton = this.require("#cancel-button"), this.replayButton = this.require("#replay-button"), this.statusText = this.require("#status-text"), this.timer = this.require("#timer"), this.loading = this.require(".loading"), this.loadingProgress = this.require("#loading-progress"), this.loadingMessage = this.require("#loading-message"), this.fallback = this.require(".fallback"), this.result = this.require(".result"), this.resultEyebrow = this.require("#result-eyebrow"), this.resultLabel = this.require("#result-label"), this.resultMeta = this.require("#result-meta"), this.resultCaveat = this.require("#result-caveat"), this.notice = this.require(".notice"), this.noticeTitle = this.require("#notice-title"), this.noticeMessage = this.require("#notice-message"), this.noticeRetry = this.require("#notice-retry"), this.assetBanner = this.require(".asset-banner"), this.assetBannerText = this.require("#asset-banner-text"), this.assetRetry = this.require("#asset-retry"), this.liveRegion = this.require("#live-region"), this.recordButton.addEventListener("click", this.handleRecordClick), this.cancelButton.addEventListener("click", this.handleCancelClick), this.replayButton.addEventListener("click", this.handleReplayClick), this.noticeRetry.addEventListener("click", this.handleRetryClick), this.assetRetry.addEventListener("click", this.handleRetryAssetsClick), this.setPhase("boot");
+		this.root = e, this.callbacks = t, this.recordButton = this.require("#record-button"), this.themeButton = this.require("#theme-toggle"), this.recordLabel = this.require("#record-label"), this.recordHint = this.require("#record-hint"), this.cancelButton = this.require("#cancel-button"), this.replayButton = this.require("#replay-button"), this.statusText = this.require("#status-text"), this.timer = this.require("#timer"), this.loading = this.require(".loading"), this.loadingProgress = this.require("#loading-progress"), this.loadingMessage = this.require("#loading-message"), this.fallback = this.require(".fallback"), this.result = this.require(".result"), this.resultEyebrow = this.require("#result-eyebrow"), this.resultLabel = this.require("#result-label"), this.resultMeta = this.require("#result-meta"), this.resultCaveat = this.require("#result-caveat"), this.notice = this.require(".notice"), this.noticeTitle = this.require("#notice-title"), this.noticeMessage = this.require("#notice-message"), this.noticeRetry = this.require("#notice-retry"), this.assetBanner = this.require(".asset-banner"), this.assetBannerText = this.require("#asset-banner-text"), this.assetRetry = this.require("#asset-retry"), this.liveRegion = this.require("#live-region"), this.recordButton.addEventListener("click", this.handleRecordClick), this.themeButton.addEventListener("click", this.handleThemeClick), this.cancelButton.addEventListener("click", this.handleCancelClick), this.replayButton.addEventListener("click", this.handleReplayClick), this.noticeRetry.addEventListener("click", this.handleRetryClick), this.assetRetry.addEventListener("click", this.handleRetryAssetsClick), this.setPhase("boot");
+		let n = window.localStorage.getItem("voice-reveal-theme");
+		this.setTheme(n === "light" ? "light" : "dark");
 	}
 	setReady(e) {
 		this.ready = e, this.syncRecordButton();
@@ -16149,7 +16358,7 @@ var Pg = class {
 		}, 40);
 	}
 	dispose() {
-		this.recordButton.removeEventListener("click", this.handleRecordClick), this.cancelButton.removeEventListener("click", this.handleCancelClick), this.replayButton.removeEventListener("click", this.handleReplayClick), this.noticeRetry.removeEventListener("click", this.handleRetryClick), this.assetRetry.removeEventListener("click", this.handleRetryAssetsClick), this.resultTimeline?.kill(), this.noticeTimeline?.kill(), this.announceTimer !== null && (window.clearTimeout(this.announceTimer), this.announceTimer = null), this.audio &&= (this.audio.pause(), this.audio.removeAttribute("src"), this.audio.load(), null), this.replayUrl = null;
+		this.recordButton.removeEventListener("click", this.handleRecordClick), this.themeButton.removeEventListener("click", this.handleThemeClick), this.cancelButton.removeEventListener("click", this.handleCancelClick), this.replayButton.removeEventListener("click", this.handleReplayClick), this.noticeRetry.removeEventListener("click", this.handleRetryClick), this.assetRetry.removeEventListener("click", this.handleRetryAssetsClick), this.resultTimeline?.kill(), this.noticeTimeline?.kill(), this.announceTimer !== null && (window.clearTimeout(this.announceTimer), this.announceTimer = null), this.audio &&= (this.audio.pause(), this.audio.removeAttribute("src"), this.audio.load(), null), this.replayUrl = null;
 	}
 	require(e) {
 		let t = this.root.querySelector(e);
@@ -16166,6 +16375,14 @@ var Pg = class {
 	handleRecordClick = () => {
 		this.ready && this.phase !== "boot" && this.phase !== "processing" && this.callbacks.onRecordClick();
 	};
+	handleThemeClick = () => {
+		this.setTheme(this.root.dataset.theme === "light" ? "dark" : "light");
+	};
+	setTheme(e) {
+		this.root.dataset.theme = e, document.documentElement.dataset.voiceTheme = e, window.localStorage.setItem("voice-reveal-theme", e);
+		let t = e === "dark" ? "light" : "dark";
+		this.themeButton.setAttribute("aria-label", `Switch to ${t} theme`), this.themeButton.setAttribute("aria-pressed", e === "light" ? "true" : "false");
+	}
 	handleCancelClick = () => {
 		this.callbacks.onCancelClick();
 	};
