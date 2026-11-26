@@ -384,6 +384,14 @@ export class VoiceRevealUI {
     button.type = "button";
     button.setAttribute("aria-label", "Switch to light theme");
     button.title = "Switch theme";
+    Object.assign(button.style, {
+      position: "absolute",
+      top: "0.8rem",
+      right: "0.85rem",
+      zIndex: "10",
+      width: "36px",
+      height: "36px",
+    });
     button.innerHTML = `
       <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
         <circle cx="12" cy="12" r="4" />
