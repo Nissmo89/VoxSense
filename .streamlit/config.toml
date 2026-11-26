@@ -1,0 +1,21 @@
+[theme]
+base = "dark"
+primaryColor = "#d8c096"
+backgroundColor = "#0b0a08"
+secondaryBackgroundColor = "#181510"
+textColor = "#f2ede3"
+borderColor = "#383026"
+font = "Helvetica Neue, Arial, sans-serif"
+headingFont = "Georgia, serif"
+baseRadius = "0.35rem"
+buttonRadius = "0.35rem"
+showWidgetBorder = false
+paddingTop = "1.5rem"
+paddingBottom = "2rem"
+
+[client]
+toolbarMode = "viewer"
+showSidebarNavigation = false
+
+[server]
+runOnSave = true

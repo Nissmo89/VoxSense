@@ -1,0 +1,8 @@
+-e ./components/voice-reveal-component
+streamlit==1.66.0
+scikit-learn==1.9.1
+joblib==1.6.0
+opensmile==2.6.0
+soundfile==0.14.0
+numpy==2.5.4
+pandas==3.0.6

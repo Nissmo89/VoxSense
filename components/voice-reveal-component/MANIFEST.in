@@ -1,0 +1,2 @@
+recursive-include voice_reveal_component/frontend/build *
+include pyproject.toml
